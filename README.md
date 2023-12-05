@@ -2,7 +2,7 @@
 
 This project contains Python scripts to
 * Run prompts using Azure OpenAI GPT to classify a genetics functional paper (or papers)
-* Post process answers from Azure OepnAI GPT to simplify the classification
+* Post process answers from Azure OepnAI GPT for final classification using regular expressions
 
 # Getting started
 
