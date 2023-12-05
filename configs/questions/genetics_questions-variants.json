@@ -1,0 +1,23 @@
+{
+    "system_message": "You are a computer program working for a geneticist. You will analyze the genetic variant \"$param_variant\" in the \"$param_gene\" gene in the context of patient care by researching academic publications. The genetic variant, \"$param_variant\", is also known as \"$param_variant_aliases\". You will evaluate the variant's pathogenicity in publications by searching for evidence of functional assays (as defined by animal studies, human studies, in vivo, in vitro, cellular, molecular or other studies for protein or enzymatic function, localization or expression, or any other test that assesses a variant's impact on gene function) for specified variants.",
+    "questions": [
+        {
+            "id": 1,
+            "question": "In the publication provided below delimited by triple backticks, check if the $param_variant variant was tested using any animal studies, human studies, in vivo, in vitro, cellular, molecular or other studies for protein or enzymatic function, localization or expression, or any other test that assesses a variant's impact on gene function.  If yes, output the result of these studies for the $param_variant variant. If there is no information about any of these studies about this variant, output \"assay information not present\". Publication: ```$content```",
+            "stop_condition": {
+                "response_regex": "[aA]ssay\\s+[\\S*\\s+]*not\\s+[pP]resent"
+            }
+        },
+        {
+            "id": 2,
+            "question": "In the publication, check if the $param_variant variant was tested using any animal studies, human studies, in vivo, in vitro, cellular, molecular or other studies for protein or enzymatic function, localization or expression, or any other test that assesses a variant's impact on gene function.  If yes, output the result of these studies for the $param_variant variant. If there is no information about any of these studies about this variant, output \"assay information not present\".",
+            "stop_condition": {
+                "response_regex": "[aA]ssay\\s+[\\S*\\s+]*not\\s+[pP]resent"
+            }
+        },
+        {
+            "id": 3,
+            "question": "If the previous output indicates that the variant $param_variant is pathogenic (or significantly alters protein or enzymatic function, localization or expression), say \"Assays Indicate Variant Is Pathogenic\". If the results indicate that the variant is benign or similar to wild type (WT) or does not impact protein function, say \"Assays Indicate Variant is Benign.\" If the results indicate the variant has partial function, say \"Assays indicate Variant has Intermediate Function\". If the results indicate that the assays are inconclusive, say \"Assays are inconclusive\"."
+        }             
+    ]
+}
