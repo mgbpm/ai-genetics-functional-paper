@@ -4,6 +4,18 @@ This project contains Python scripts to
 * Run prompts using Azure OpenAI GPT to classify a genetics functional paper (or papers)
 * Post process answers from Azure OepnAI GPT for final classification using regular expressions
 
+```
+logs/                       - Stores execution log files
+results/                    - Stores execution result files
+configs
+  files/                    - Configs for paper input paremeters
+  questions/                - Configs for system message and questions
+PDF-files/                  - Stores Genetics functional papers
+utils/                      - Utility functions
+execute_prompts.py          - Main program to process functional papers
+outcome_post_process.py     - Program to post process for final classification
+```
+
 # Getting started
 
 ## Install Python and required modules
@@ -29,16 +41,6 @@ pip install -r requirements.txt
 * Copy over environment variables from .env-examples
 * Specify values for the environment variables
 
-## Project Structure
-
- * /logs - stores execution log files
- * /results - stores execution result files
- * /configs/files - configs for paper input paremeters
- * /configs/questions - configs for system message and questions
- * /PDF-files - genetics functional papers
- * /utils - utility functions
- * execute_prompts.py - main program to process functional papers
- * outcome_post_process.py - program to post process for final classification
 
 # Classification: Paper Processing
 ## Usage
@@ -86,7 +88,7 @@ required arguments:
 ## Examples
 ### Post process a results file
 ```
-# Adds a new column "Processed Answer" to the results file
+# Adds a new column "Processed Answer" to the outcome file
 python outcome_post_processing.py \
     --outcomeFile='result/prompt_execution_result-2023_12_05-10_24_16_AM.csv' \
 ```
