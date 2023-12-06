@@ -41,8 +41,27 @@ pip install -r requirements.txt
 * Copy over environment variables from .env-examples
 * Specify values for the environment variables
 
+# Prerequisites
+## Functional Papers to Process
+1. Gather the genetics functional papers in PDF you want to process.
+2. Store the papers in a dedicated folder called `/PDF-files`.
+3. Configure the location of this folder in your configuration file (e.g. configs/files/publication_params_training.xlsx)
 
-# Classification: Paper Processing
+## Configuration File for Input Parameters
+1. Create an Excel file in the `/configs/files` directory.
+2. The file should contain the following columns:
+
+Column Name | Description | Example
+------------|-------------|--------
+id          | Unique identifier for each paper | pub-1
+file_path   | Relative path to the paper's PDF file | PDF-files/training_set
+file_name   | Filename of the paper's PDF file | example_paper.pdf
+variant     | Target genetic variant           | c.70T>C (p.C24R)
+gene        | Gene associated with the variant | BRCA1
+variant_aliases | A list of nomenclature aliases equivalent to the target variant (separated by commas) | c.70T>C,70T/C,70T>C
+expected_outcomes | Expected classification | Pathogenic
+
+# Program: Paper Processing
 ## Usage
 ```
 usage: python execute_prompts.py [--fileConfig] [--questionConfg]
@@ -77,7 +96,7 @@ python execute_prompts.py \
     --questionConfig='configs/questions/genetics_questions-variants.json' \
     --sleepAtEachPublication=5
 ```
-# Classification: Post Processing
+# Program: Post Processing
 ## Usage
 ```
 usage: python outcome_post_processing.py [--outcomeFile]
