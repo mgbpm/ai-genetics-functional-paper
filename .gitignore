@@ -142,3 +142,8 @@ cython_debug/
 
 # Experimental Jupyter notebooks
 pdf-prompts.ipynb
+
+# Project specific
+logs/
+result/
+PDF-files/
