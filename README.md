@@ -10,7 +10,7 @@ results/                    - Stores execution result files
 configs
   files/                    - Configs for paper input paremeters
   questions/                - Configs for system message and questions
-PDF-files/                  - Stores Genetics functional papers
+PDF-files/                  - Stores genetics functional papers
 utils/                      - Utility functions
 execute_prompts.py          - Main program to process functional papers
 outcome_post_process.py     - Program to post process for final classification
