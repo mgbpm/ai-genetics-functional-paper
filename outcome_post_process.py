@@ -25,7 +25,7 @@ def process_answer(row: Mapping[str, str]) -> str:
     if found:
         return 'Benign Evidence'
     
-    found = re.search(r'[vV]ariant\s+\w*\s*[iL]nconclusive', answer)
+    found = re.search(r'[vV]ariant\s+\w*\s*[iI]nconclusive', answer)
     if found:
         return 'Assays are Inconclusive'
     
