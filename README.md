@@ -35,6 +35,21 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+On Linux:
+```shell
+sudo apt-get update
+# sudo apt-get install build-essential libpoppler-cpp-dev pkg-config
+try:
+    sudo apt-get install python-dev
+except:
+    sudo apt-get install python3-dev
+    
+python -m venv .venv
+source .venv/bin/activate
+pip install python-poppler
+pip install -r requirements.txt
+```
+
 ## Environment variables
 
 * Create a file named '.env'
