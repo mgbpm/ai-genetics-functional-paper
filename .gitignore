@@ -147,3 +147,4 @@ pdf-prompts.ipynb
 logs/
 result/
 PDF-files/
+.idea/*
