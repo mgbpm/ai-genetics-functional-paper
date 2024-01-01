@@ -1,5 +1,9 @@
+import logging
 import re
+import os
 from PyPDF2 import PdfReader
+from difflib import SequenceMatcher
+
 
 def convert_pdf_to_txt(pdf_filepath: str) -> str:
     """
@@ -25,3 +29,22 @@ def __remove_reference_section(text_content: str) -> str:
     else:
         return text_content
 
+def __similarity(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+def find_most_similar_pdf(pdf_filepath, folder_path):
+    most_similar_file = None
+    highest_similarity = 0
+
+    for file in os.listdir(folder_path):
+        if file.lower().endswith('.pdf'):
+            sim_score = __similarity(pdf_filepath, file)
+
+            if sim_score > highest_similarity:
+                highest_similarity = sim_score
+                most_similar_file = file
+
+    if most_similar_file:
+        return os.path.join(folder_path, most_similar_file)
+    else:
+        return None

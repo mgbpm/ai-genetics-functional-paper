@@ -121,7 +121,12 @@ class PromptExecutor:
         logging.debug(f"Id: '{publication_id}', File Path: '{pdf_filepath}', Variant: '{variant}', Gene: '{gene}'")
 
         # Convert PDF to text
+        # logging.debug(f'Original pdf_filepath: {pdf_filepath}')
+        pdf_filepath = file_utils.find_most_similar_pdf(pdf_filepath, os.path.dirname(pdf_filepath))
+        # logging.debug(f'Finding pdf_filepath: {pdf_filepath}')
+
         pdf_in_text = file_utils.convert_pdf_to_txt(pdf_filepath)
+        logging.info(f'Publication {publication_id} successfully converted to text')
 
         # Find the longest variant that appears in PDF
         variant_perms = variant_aliases.copy()
