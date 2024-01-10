@@ -31,7 +31,8 @@ def visualize_confusion_matrix(df: pd.DataFrame, output_path: Path):
     cm = confusion_matrix(df['expected_outcomes'], df['processed_answer'], labels=labels)
 
     plt.figure(figsize=(12, 10))
-    ax = sns.heatmap(cm, annot=True, fmt='d', xticklabels=labels, yticklabels=labels, cmap='Blues')
+    ax = sns.heatmap(cm, annot=True, fmt='d', xticklabels=labels, yticklabels=labels,
+                     cmap='Blues', annot_kws={"size": 14})
     plt.title('Confusion Matrix', fontsize=18)
     plt.ylabel('True Label', fontsize=16)
     plt.xlabel('Predicted Label', fontsize=16)
@@ -50,7 +51,7 @@ def analyze_results(args):
     if args.saveMismatches:
         args.outputDir.mkdir(parents=True, exist_ok=True)
         mismatches = df[df['processed_answer'] != df['expected_outcomes']]
-        columns_to_remove = ["prompt_tokens", "completion_tokens", "estimated_cost", "timestamp"]
+        columns_to_remove = ["prompt_tokens", "completion_tokens", "estimated_cost", "timestamp", "id_num"]
         output_path = args.outputDir / f'{args.csvPath.stem}_mismatches.csv'
         mismatches.drop(columns=columns_to_remove).to_csv(output_path, index=False)
         print(f"Mismatches saved to {output_path}")
