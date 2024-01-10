@@ -111,24 +111,35 @@ python execute_prompts.py \
     --questionConfig='configs/questions/genetics_questions-variants.json' \
     --sleepAtEachPublication=5
 ```
-# Program: Post Processing
+# Program: Results Analysis
+This program analyzes the results from GPT executions, calculating the accuracy of the classifications and optionally saving any mismatches.
+
 ## Usage
 ```
-usage: python outcome_post_processing.py [--outcomeFile]
+usage: python analyze_results.py [--csvPath] [--saveMismatches] [--outputDir]
 
 required arguments:
-  --outcomeFile             CSV file that captures execution results
+--csvPath Path to the input CSV file containing GPT execution results
+
+optional arguments:
+--saveMismatches Flag to save mismatches to a CSV file
+--outputDir Directory to save the mismatches CSV file (default: 'mismatches')
 ```
 ## Examples
-### Post process a results file
+### 
 ```
-# Adds a new column "Processed Answer" to the outcome file
-python outcome_post_processing.py \
-    --outcomeFile='result/prompt_execution_result-2023_12_05-10_24_16_AM.csv' \
+# Calculate accuracy
+python analyze_results.py
+--csvPath='result/prompt_execution_result-2023_12_05-10_24_16_AM.csv'
+
+# Calculate accuracy and save mismatches
+python analyze_results.py
+--csvPath='result/prompt_execution_result-2023_12_05-10_24_16_AM.csv'
+--saveMismatches
+--outputDir='mismatches'
 ```
 # Development
 If you install any new packages, make sure to update requirements.txt:
 ```
 pip freeze > requirements.txt
 ```
-
