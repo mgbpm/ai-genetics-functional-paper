@@ -147,5 +147,5 @@ pdf-prompts.ipynb
 # Project specific
 logs/*
 result/*
-mismatches/*
+analysis/*
 PDF-files/*
