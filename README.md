@@ -132,11 +132,12 @@ optional arguments:
 python analyze_results.py
 --csvPath='result/prompt_execution_result-2023_12_05-10_24_16_AM.csv'
 
-# Calculate accuracy and save mismatches
+# Calculate accuracy, save mismatches, and visualize the results
 python analyze_results.py
 --csvPath='result/prompt_execution_result-2023_12_05-10_24_16_AM.csv'
 --saveMismatches
---outputDir='mismatches'
+--outputDir='analysis'
+--visualize
 ```
 # Development
 If you install any new packages, make sure to update requirements.txt:

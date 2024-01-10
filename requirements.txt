@@ -7,6 +7,7 @@ charset-normalizer
 et-xmlfile
 frozenlist
 idna
+matplotlib
 multidict
 mypy
 mypy-extensions
@@ -20,6 +21,8 @@ PyPDF2
 python-dateutil
 python-dotenv
 requests
+scikit-learn
+seaborn
 six
 tomli
 tqdm
