@@ -7,6 +7,7 @@ __pycache__/
 *.so
 
 # Distribution / packaging
+.idea*
 .Python
 build/
 develop-eggs/
@@ -144,7 +145,7 @@ cython_debug/
 pdf-prompts.ipynb
 
 # Project specific
-logs/
-result/
-PDF-files/
-.idea/*
+logs/*
+result/*
+mismatches/*
+PDF-files/*
