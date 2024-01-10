@@ -26,8 +26,8 @@ def analyze_results(csv_path: Path, output_dir: Path, save_mismatches: bool):
     df.drop_duplicates(subset='id_num', keep='first', inplace=True)
     df.loc[:, 'processed_answer'] = df['answer'].apply(process_answer)
 
-    accuracy = (df['processed_answer'] == df['expected_outcomes']).mean()
-    print(f'Accuracy: {accuracy:.2%}')
+    matchings = df['processed_answer'] == df['expected_outcomes']
+    print(f'Accuracy: {matchings.mean():.2%} ({matchings.sum()}/{len(df)})')
 
     if save_mismatches:
         output_dir.mkdir(parents=True, exist_ok=True)
