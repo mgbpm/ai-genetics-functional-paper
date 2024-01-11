@@ -20,17 +20,42 @@ def convert_pdf_to_txt(pdf_filepath: str) -> str:
     # Find the reference section, and remove it (if exists)
     return __remove_reference_section(full_text)
 
+
+# def __remove_reference_section_old(text_content: str) -> str:
+#     # Find the reference section, and remove it (if exists)
+#     matching_indexes = [i.start() for i in re.finditer(r'[R|r]eferences\s*\n', text_content, re.IGNORECASE)]
+#     if len(matching_indexes) > 0:
+#         last_index = matching_indexes[-1]
+#         return text_content[:last_index]
+#     else:
+#         return text_content
+
+
 def __remove_reference_section(text_content: str) -> str:
-    # Find the reference section, and remove it (if exists)
+    # Regular expressions to match the start of the reference section and possible end indicators
+    ref_end_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in [
+        'Appendix', 'Appendices', 'Annex', 'End of References', r'Fig\.\s+\d+', r'Figure\s+\d+', r'Table\s+\d+'
+    ]]
+
+    # Find the start of the reference section
     matching_indexes = [i.start() for i in re.finditer(r'[R|r]eferences\s*\n', text_content, re.IGNORECASE)]
     if len(matching_indexes) > 0:
-        last_index = matching_indexes[-1]
-        return text_content[:last_index]
+        start_index = matching_indexes[-1]
+        end_index = len(text_content)
+        for pattern in ref_end_patterns:
+            match = pattern.search(text_content, pos=start_index)
+            if match and match.start() < end_index:
+                end_index = match.start()
+
+        # Exclude the reference section
+        return text_content[:start_index] + text_content[end_index:]
     else:
         return text_content
 
+
 def __similarity(a, b):
     return SequenceMatcher(None, a, b).ratio()
+
 
 def find_most_similar_pdf(pdf_filepath, folder_path):
     most_similar_file = None
