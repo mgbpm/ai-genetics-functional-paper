@@ -9,7 +9,7 @@ from typing import Mapping
 def process_answer(row: Mapping[str, str]) -> str:
     answer = row['answer']
 
-    found = re.search(r'"answer": "Assay Information Not Present"', answer)
+    found = re.search(r'"answer": "No", "details": "Assay Information Not Present"', answer)
     if found:
         return 'Assays Not Present'
 
@@ -29,7 +29,11 @@ def process_answer(row: Mapping[str, str]) -> str:
     if found:
         return 'Assays are Inconclusive'
     
-    return answer
+    found = re.search(r'"answer": "Cannot classify"', answer)
+    if found:
+        return 'Cannot classify'
+    
+    return ''
 
 
 def main():
