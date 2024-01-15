@@ -1,6 +1,7 @@
 import os
 import sys
 import openai
+from openai import AzureOpenAI
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from logging import DEBUG, INFO
@@ -206,8 +207,6 @@ class PromptExecutor:
 
         If no variant with evidence exists, it returns None
         """
-        regex_no_answer = r'do\s+not\s+know\s+\w*\s*answer'
-        regex_not_in_pub = r'not\s+[\S*\s+]*in\s+[\S*\s+]*[pP]ublication'
 
         # Find variant using question #1 (with content included) and #2 (without content)
         question_with_content = questions[0]
@@ -253,8 +252,6 @@ class PromptExecutor:
             result = self.__execute_single_prompt(prompt['question'], prompt['variant'], messages, input_params)
 
             no_evidence = re.search(prompt['regex_condition'], result['answer'])
-            no_evidence = re.search(regex_no_answer, result['answer']) if no_evidence is None else no_evidence
-            no_evidence = re.search(regex_not_in_pub, result['answer']) if no_evidence is None else no_evidence
             # Check if functional evidence has been found
             if not no_evidence:
                 variant_with_evidence = prompt['variant']
@@ -305,11 +302,11 @@ class PromptExecutor:
         response = self.__call_openapi_chat_completion(messages)
 
         # Append response to the messages to retain previous context
-        usage = response['usage']
-        message = response['choices'][0]['message']
+        usage = response.usage
+        message = response.choices[0].message
         messages.append(message)
-        logging.info('> AI: ' + message['content'])
-        logging.info('Completion Tokens: ' + str(usage['completion_tokens']) + ', Prompt Tokens: ' + str(usage['prompt_tokens']))
+        logging.info('> AI: ' + message.content)
+        logging.info('Completion Tokens: ' + str(usage.completion_tokens) + ', Prompt Tokens: ' + str(usage.prompt_tokens))
         logging.info(f'##### End prompt #{id}\n')
 
         # Capture a summary of result for each prompt
@@ -319,13 +316,13 @@ class PromptExecutor:
             'system_message': system_message,
             'prompt_id': index,
             'prompt': re.sub('\s+', ' ', prompt_template),
-            'answer': re.sub('\s+', ' ', message['content']),
+            'answer': re.sub('\s+', ' ', message.content),
             'variant': variant,
             'gene': gene,
             'expected_outcomes': expected_outcome,
-            'prompt_tokens': usage['prompt_tokens'],
-            'completion_tokens': usage['completion_tokens'],
-            'estimated_cost': (0.06 * (usage['prompt_tokens']/1000) + 0.12 * (usage['completion_tokens']/1000)),
+            'prompt_tokens': usage.prompt_tokens,
+            'completion_tokens': usage.completion_tokens,
+            'estimated_cost': (0.06 * (usage.prompt_tokens/1000) + 0.12 * (usage.completion_tokens/1000)),
             'timestamp': datetime.now().isoformat()
         }
         # Write the result to CSV file
@@ -366,15 +363,25 @@ class PromptExecutor:
                 }
             }
         else:
-            logging.debug(f'Calling OpenAI: GPT Deployment - {self.gpt_deployment}')    
-            return openai.ChatCompletion.create(
-                        engine = self.gpt_deployment,
-                        messages = messages,
-                        temperature=self.temperature,
-                        max_tokens=self.max_tokens,
-                        top_p=0.95,
-                        frequency_penalty=0,
-                        presence_penalty=0)
+            logging.debug(f'Calling OpenAI: GPT Deployment - {self.gpt_deployment}')
+            client = AzureOpenAI(
+                azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT"), 
+                api_key=os.getenv('AZURE_OPENAI_KEY'),  
+                api_version=os.getenv('AZURE_OPENAI_VERSION')
+                )
+            return client.chat.completions.create(
+                model=self.gpt_deployment, # Model = should match the deployment name you chose for your 1106-preview model deployment
+                response_format={ "type": "json_object" },
+                messages=messages,
+                # logprobs=True,
+                # top_logprobs=5,
+                temperature=0,
+                max_tokens=self.max_tokens,
+                top_p=0.95,
+                frequency_penalty=0,
+                presence_penalty=0,
+                seed=42
+            )
         
     def __read_publication_configs(self, fname: str) -> Dict[str, Any]:
         """
@@ -490,11 +497,6 @@ def main():
 
     # Load environment variables
     load_dotenv()
-    # Set up openai
-    openai.api_type = os.getenv('AZURE_OPENAI_TYPE')
-    openai.api_base = os.getenv("AZURE_OPENAI_ENDPOINT")
-    openai.api_version = os.getenv("AZURE_OPENAI_VERSION")
-    openai.api_key = os.getenv('AZURE_OPENAI_KEY')
     gpt_deployment = os.getenv('AZURE_GPT_DEPLOYMENT')
 
     try:
