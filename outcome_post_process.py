@@ -9,23 +9,23 @@ from typing import Mapping
 def process_answer(row: Mapping[str, str]) -> str:
     answer = row['answer']
 
-    found = re.search(r'[aA]ssay\s+[\S*\s+]*not\s+[pP]resent', answer)
+    found = re.search(r'"answer": "Assay Information Not Present"', answer)
     if found:
         return 'Assays Not Present'
 
-    found = re.search(r'[vV]ariant\s+\w*\s*[iI]ntermediate\s+[fF]unction', answer)
+    found = re.search(r'"answer": "Assays indicate Variant has Intermediate Function"', answer)
     if found:
         return 'Evidence of Intermediate Function'
     
-    found = re.search(r'[vV]ariant\s+\w*\s*[pP]athogenic', answer)
+    found = re.search(r'"answer": "Assays Indicate Variant Is Pathogenic"', answer)
     if found:
         return 'Pathogenic Evidence'
     
-    found = re.search(r'[vV]ariant\s+\w*\s*[bB]enign', answer)
+    found = re.search(r'"answer": "Assays Indicate Variant is Benign"', answer)
     if found:
         return 'Benign Evidence'
     
-    found = re.search(r'[vV]ariant\s+\w*\s*[iL]nconclusive', answer)
+    found = re.search(r'"answer": "Assays are inconclusive"', answer)
     if found:
         return 'Assays are Inconclusive'
     
