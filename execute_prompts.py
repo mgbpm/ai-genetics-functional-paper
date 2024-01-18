@@ -322,7 +322,7 @@ class PromptExecutor:
             'expected_outcomes': expected_outcome,
             'prompt_tokens': usage.prompt_tokens,
             'completion_tokens': usage.completion_tokens,
-            'estimated_cost': (0.06 * (usage.prompt_tokens/1000) + 0.12 * (usage.completion_tokens/1000)),
+            'estimated_cost': (0.01 * (usage.prompt_tokens/1000) + 0.03 * (usage.completion_tokens/1000)),
             'timestamp': datetime.now().isoformat()
         }
         # Write the result to CSV file

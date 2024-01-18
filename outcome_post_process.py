@@ -9,29 +9,29 @@ from typing import Mapping
 def process_answer(row: Mapping[str, str]) -> str:
     answer = row['answer']
 
-    found = re.search(r'"answer": "No", "details": "Assay Information Not Present"', answer)
+    found = re.search(r'"answer": "No", "details": "Assay Information Not Present"', answer, re.IGNORECASE)
     if found:
-        return 'Assays Not Present'
+        return 'No Assays'
 
-    found = re.search(r'"answer": "Assays indicate Variant has Intermediate Function"', answer)
+    found = re.search(r'"answer": "Assays indicate Variant has Intermediate Function"', answer, re.IGNORECASE)
     if found:
-        return 'Evidence of Intermediate Function'
+        return 'Intermediate'
     
-    found = re.search(r'"answer": "Assays Indicate Variant Is Pathogenic"', answer)
+    found = re.search(r'"answer": "Assays Indicate Variant Is Pathogenic"', answer, re.IGNORECASE)
     if found:
-        return 'Pathogenic Evidence'
+        return 'Pathogenic'
     
-    found = re.search(r'"answer": "Assays Indicate Variant is Benign"', answer)
+    found = re.search(r'"answer": "Assays Indicate Variant is Benign"', answer, re.IGNORECASE)
     if found:
-        return 'Benign Evidence'
+        return 'Benign'
     
-    found = re.search(r'"answer": "Assays are inconclusive"', answer)
+    found = re.search(r'"answer": "Assays are inconclusive"', answer, re.IGNORECASE)
     if found:
-        return 'Assays are Inconclusive'
+        return 'Inconclusive'
     
-    found = re.search(r'"answer": "Cannot classify"', answer)
+    found = re.search(r'"answer": "Cannot classify"', answer, re.IGNORECASE)
     if found:
-        return 'Cannot classify'
+        return 'Cannot Classify'
     
     return ''
 
