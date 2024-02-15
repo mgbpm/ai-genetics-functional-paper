@@ -1,0 +1,14 @@
+[FORMAT]
+
+# Set the maximum allowed line length
+max-line-length=150
+
+[MESSAGES CONTROL]
+
+# Disable the "missing-function-docstring" check
+disable=missing-function-docstring
+
+[LOGGING]
+
+# Set the logging format style
+logging-format-style=fstr

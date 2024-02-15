@@ -32,6 +32,7 @@ CSV_COLUMNS = [
     'prompt_tokens',
     'completion_tokens',
     'estimated_cost',
+    'system_fingerprint',
     'timestamp'
 ]
 
@@ -303,6 +304,7 @@ class PromptExecutor:
 
         # Append response to the messages to retain previous context
         usage = response.usage
+        system_fingerprint = response.system_fingerprint
         message = response.choices[0].message
         messages.append(message)
         logging.info('> AI: ' + message.content)
@@ -323,6 +325,7 @@ class PromptExecutor:
             'prompt_tokens': usage.prompt_tokens,
             'completion_tokens': usage.completion_tokens,
             'estimated_cost': (0.01 * (usage.prompt_tokens/1000) + 0.03 * (usage.completion_tokens/1000)),
+            'system_fingerprint': system_fingerprint,
             'timestamp': datetime.now().isoformat()
         }
         # Write the result to CSV file
@@ -370,11 +373,8 @@ class PromptExecutor:
                 api_version=os.getenv('AZURE_OPENAI_VERSION')
                 )
             return client.chat.completions.create(
-                model=self.gpt_deployment, # Model = should match the deployment name you chose for your 1106-preview model deployment
-                response_format={ "type": "json_object" },
+                model=self.gpt_deployment,
                 messages=messages,
-                # logprobs=True,
-                # top_logprobs=5,
                 temperature=0,
                 max_tokens=self.max_tokens,
                 top_p=0.95,
@@ -498,6 +498,8 @@ def main():
     # Load environment variables
     load_dotenv()
     gpt_deployment = os.getenv('AZURE_GPT_DEPLOYMENT')
+    logging.info(f'Endpoint: {os.getenv("AZURE_OPENAI_ENDPOINT")}')
+    logging.info(f'Deployment: {gpt_deployment}')
 
     try:
         executor = PromptExecutor(args, gpt_deployment)
