@@ -143,6 +143,9 @@ cython_debug/
 # Experimental Jupyter notebooks
 pdf-prompts.ipynb
 
+# Pycharm
+.idea/
+
 # Project specific
 logs/
 result/

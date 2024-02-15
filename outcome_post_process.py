@@ -6,6 +6,7 @@ from pandas import read_csv
 import re
 from typing import Mapping
 
+
 def process_answer(row: Mapping[str, str]) -> str:
     answer = row['answer']
 
@@ -16,20 +17,20 @@ def process_answer(row: Mapping[str, str]) -> str:
     found = re.search(r'[vV]ariant\s+\w*\s*[iI]ntermediate\s+[fF]unction', answer)
     if found:
         return 'Intermediate'
-    
+
     found = re.search(r'[vV]ariant\s+\w*\s*[pP]athogenic', answer)
     if found:
         return 'Pathogenic'
-    
+
     found = re.search(r'[vV]ariant\s+\w*\s*[bB]enign', answer)
     if found:
         return 'Benign'
-    
+
     found = re.search(r'[vV]ariant\s+\w*\s*[iI]nconclusive', answer)
     if found:
         return 'Inconclusive'
-    
-    return ''
+
+    return 'Cannot Classify'
 
 
 def main():
@@ -52,6 +53,7 @@ def main():
     # Add a new column in the result file for the processed answer
     data['processed_answer'] = data.apply(lambda row: process_answer(row), axis=1)
     data.to_csv(args.outcomeFile, index=False)
+
 
 if __name__ == "__main__":
     main()
