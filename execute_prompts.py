@@ -258,7 +258,7 @@ class PromptExecutor:
 
             no_evidence = re.search(prompt['regex_condition'], result['answer'])
             # Check if functional evidence has been found
-            if not no_evidence:
+            if no_evidence is not None:
                 variant_with_evidence = prompt['variant']
                 break
 
