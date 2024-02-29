@@ -20,7 +20,7 @@ outcome_post_process.py     - Program to post process for final classification
 
 ## Install Python and required modules
 
-* Install python 3.8+ https://www.python.org/downloads/
+* Install python 3.10+ https://www.python.org/downloads/
 * Install poppler (PDF rendering library) https://poppler.freedesktop.org/
 * Create a new Python virtual environment venv
 * Activate the new Python virtual environment

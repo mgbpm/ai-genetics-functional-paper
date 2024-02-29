@@ -53,8 +53,10 @@ class PromptExecutor:
         self.questions_parameters: Dict = self.__read_question_configs(args.questionConfig)
         self.result_file_path: str = self.__setup_result_file()
         self.gpt_deployment: str = gpt_deployment
-        self.temperature: int = args.temperature
+        self.temperature: float = args.temperature
+        self.seed: int = args.seed
         self.max_tokens: int = args.maxTokens
+        self.enable_json_mode: bool = args.enableJsonMode
 
     def process(self) -> None:
         """
@@ -351,15 +353,19 @@ class PromptExecutor:
             api_key=os.getenv('AZURE_OPENAI_KEY'),
             api_version=os.getenv('AZURE_OPENAI_VERSION')
         )
+
+        # Handles JSON mode
+        response_format = { "type": "json_object" } if self.enable_json_mode else None
         return client.chat.completions.create(
             model=self.gpt_deployment,
             messages=messages,
-            temperature=0,
+            temperature=self.temperature,
             max_tokens=self.max_tokens,
             top_p=0.95,
             frequency_penalty=0,
             presence_penalty=0,
-            seed=42
+            seed=self.seed,
+            response_format=response_format
         )
 
     def __read_publication_configs(self, fname: str) -> Dict[str, Any]:
@@ -461,9 +467,13 @@ def main():
     parser.add_argument(
         '--questionConfig', help='System message and list of questions', required=True)
     parser.add_argument(
-        '--temperature', help='GPT model - temperature setting', required=False, type=int, default=0)
+        '--temperature', help='GPT model - temperature setting', required=False, type=float, default=0)
+    parser.add_argument(
+        '--seed', help='GPT model - seed setting', required=False, type=int, default=42)
     parser.add_argument(
         '--maxTokens', help='GPT model - max # of tokens in response', required=False, type=int, default=1000)
+    parser.add_argument(
+        '--enableJsonMode', help='GPT model - JSON mode', action='store_true')
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
