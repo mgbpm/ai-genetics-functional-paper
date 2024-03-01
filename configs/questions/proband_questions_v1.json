@@ -1,0 +1,53 @@
+{
+    "system_message": "You are a computer program working for a geneticist and I am an expert geneticist at genetic variant analysis. You are designed to output JSON with two key attributes (\"answer\" and \"details\"). You analyze genetic variants in the context of patient care by researching academic publications. You analyze the genetic variant \"$param_variant\", also known as \"$param_variant_aliases\", in the \"$param_gene\" gene in the context of patient care by searching for evidence of affected (as defined by having the phenotype/disease) patients and family members for specified variants in the research publication.\nHere are some definitions to help you with your analysis: 1. Affected means having a phenotypic trait or disease, 2. Non-Affected means not having a phenotypic trait or disease, 3. Probands is defined as the first member in a family to be identified as having a having a genetic disorder or condition, 4. Affected segregations are present if affected family members have the same variant, 5. Non-segregations are present if affected family members do not have the variant, 6. Unaffected segregations are present if unaffected family members do not have the variant.\nAnswer the following questions with the highest accuracy possible, remembering to adhere to certain output formats",
+    "questions": {
+        "START": {
+            "question": "In the publication provided below delimited by triple backticks, is there at least one individual/patient who carries the $param_variant variant and is affected with $param_gene related disorder. If yes, return a JSON object with \"Yes\" as the answer and a summary of the relevant context used to answer the question as the details. Otherwise, return a JSON object with \"No\" as the answer and \"no probands present\" as the details.\nBelow is the text of the publication: ```$content```",
+            "answer_condition": "\"answer\": \"[Yy]es\"",
+            "next_question_true": "2a",
+            "next_question_false": null
+        },
+        "2a": {
+            "question": "In how many families (described in the publication) is there at least one individual/patient (proband) who is with $param_variant and who is affected with $param_gene related disorder? Return a JSON object with the count of families with affected individual(s) as the answer and leave the details empty",
+            "answer_condition": null,
+            "next_question_true": "3a",
+            "next_question_false": null
+        },
+        "3a": {
+            "question": "Are there (additional) affected family members (described in the publication), excluding the proband, who have the $param_variant in $param_gene? If yes, return a JSON object with \"Yes\" as the answer and a summary of the relevant context used to answer the question as the details. Otherwise, return a JSON object with \"No\" as the answer and \"affected segregations not identified\" as the details.",
+            "answer_condition": "\"answer\": \"[Yy]es\"",
+            "next_question_true": "3b",
+            "next_question_false": "4a"
+        },
+        "3b": {
+            "question": "How many affected family members (described in the publication), excluding the proband, for each family, have the $param_variant variant? Return a JSON object with the total count of families with affected individual(s) as the answer and the count of affected family members, with the variant, for each family as the details.  Remember to exclude the proband.",
+            "answer_condition": null,
+            "next_question_true": "4a",
+            "next_question_false": null
+        },  
+        "4a": {
+            "question": "Are there affected family members (described in the publication), excluding the proband, who do not have the $param_variant in $param_gene? If yes, return a JSON object with \"Yes\" as the answer and a summary of the relevant context used to answer the question as the details. Otherwise, return a JSON object with \"No\" as the answer and \"non-segregations not identified\" as the details.",
+            "answer_condition": "\"answer\": \"[Yy]es\"",
+            "next_question_true": "4b",
+            "next_question_false": "5a"
+        }, 
+        "4b": {
+            "question": "How many affected family members (described in the publication), excluding the proband, for each family, do not have the $param_variant variant? Return a JSON object with the total count of families with affected individual(s) as the answer and the count of affected family members, without the variant, for each family as the details.  Remember to exclude the proband.",
+            "answer_condition": null,
+            "next_question_true": "5a",
+            "next_question_false": null
+        },
+        "5a": {
+            "question": "Are there unaffected family members (described in the publication) who do not have $param_variant in the $param_gene? If yes, return a JSON object with \"Yes\" as the answer and a summary of the relevant context used to answer the question as the details. Otherwise, return a JSON object with \"No\" as the answer and \"unaffected segregations not identified\" as the details.",
+            "answer_condition": "\"answer\": \"[Yy]es\"",
+            "next_question_true": "5b",
+            "next_question_false": null
+        },
+        "5b": {
+            "question": "How many unaffected family members (described in the publication), for each family, do not have the $param_variant variant? Return a JSON object with the total count of families with unaffected individual(s) as the answer and the count of unaffected family members, without the variant, for each family as the details.",
+            "answer_condition": null,
+            "next_question_true": null,
+            "next_question_false": null
+        }
+    }
+}

@@ -1,6 +1,5 @@
 import argparse
 import csv
-import json
 import logging
 import os
 import pathlib
@@ -11,14 +10,14 @@ from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from string import Template
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Any
 
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 from openai.types.chat import ChatCompletion
 from pandas import read_excel
 
-from utils import file_utils, variant_utils
+from utils import file_utils, variant_utils, prompt_utils
 
 CSV_COLUMNS = [
     'id',
@@ -44,10 +43,12 @@ KEY_QUESTION_ID = "id"
 KEY_STOP_CONDITION = "stop_condition"
 KEY_RESP_REGEX = "response_regex"
 
+NODE_START = 'START'
+
 
 class PromptExecutor:
     def __init__(self, args, gpt_deployment: str):
-        self.publicationid: str = args.publicationId
+        self.publication_id: str = args.publicationId
         self.sleep_at_each_publication: int = args.sleepAtEachPublication
         self.publications_parameters: Dict[str, Any] = self.__read_publication_configs(args.fileConfig)
         self.questions_parameters: Dict = self.__read_question_configs(args.questionConfig)
@@ -62,9 +63,9 @@ class PromptExecutor:
         """
         Process publications in PDF as per configuration
         """
-        if self.publicationid:
+        if self.publication_id:
             # Only process the publication specified in the argument
-            self.__handle_single_publication(self.publicationid)
+            self.__handle_single_publication(self.publication_id)
         else:
             # Process all files included in the specified folder
             count = 0
@@ -135,8 +136,12 @@ class PromptExecutor:
         longest_variant = variant_utils.find_longest_matching_variant(pdf_in_text, variant_perms)
         logging.info(f'Variants: {variant_perms}')
         logging.info(f'Longest Variant: {longest_variant}')
+        # Configure a set of variants to try
+        variants_to_check = [variant, f'{gene} {variant}']
+        if longest_variant and longest_variant not in variants_to_check:
+            variants_to_check.insert(0, longest_variant)
 
-        # Initialize with a sysmtem message
+        # Initialize with a system message
         system_message = self.questions_parameters[KEY_SYSMSG]
         if '$param' in system_message:
             system_message = Template(system_message).substitute(param_variant=variant, param_gene=gene,
@@ -155,7 +160,6 @@ class PromptExecutor:
 
         # Initialize input parameters
         input_params = {
-            'index': 0,
             'param_gene': gene,
             'content': pdf_in_text,
             'publication_id': publication_id,
@@ -164,107 +168,48 @@ class PromptExecutor:
             'expected_outcome': expected_outcome
         }
 
-        # Find variant using question #1 (with content included) and #2 (without content)
-        variant_with_evidence = self.__execute_prompt_for_functional_evidence(variant, longest_variant, questions,
-                                                                              messages, input_params)
+        # Confirm that the starting point exists in the set of questions
+        if not prompt_utils.has_node(questions, NODE_START):
+            error_msg = f"Node '{NODE_START}' does not exist"
+            logging.error(error_msg)
+            raise prompt_utils.NodeMissingError(error_msg)
 
-        # If functional evidence was found, ask remaining questions
-        if variant_with_evidence:
-            index = input_params['index'] + 1
-            should_stop = False
-            for item in questions[2:]:
-                index += 1
-                if should_stop:
-                    break
+        # Check for a cycle in the set of questions defined to prevent infinite execution
+        if prompt_utils.has_cycle(questions, NODE_START):
+            error_msg = f"Cycle detected in the questions graph with the entry point at '{NODE_START}'"
+            logging.error(error_msg)
+            raise prompt_utils.CycleDetectedError(error_msg)
 
-                stop_condition = None
-                if KEY_STOP_CONDITION in item and KEY_RESP_REGEX in item[KEY_STOP_CONDITION]:
-                    stop_condition = item[KEY_STOP_CONDITION][KEY_RESP_REGEX]
-
-                result = self.__execute_single_prompt(item, variant_with_evidence, messages, input_params)
-
-                # Check if the stopping condition exists and has been satisfied
-                if stop_condition:
-                    found = re.search(stop_condition, result['answer'])
-                    if found:
-                        logging.info(f'Stopping condition {stop_condition} has been satisfied: match={found}')
-                        should_stop = True
-
-    def __execute_prompt_for_functional_evidence(
-            self,
-            variant: str,
-            longest_variant: Optional[str],
-            questions: List[Dict],
-            messages: List[Dict],
-            input_params: Dict) -> Optional[str]:
-        """
-        Handles special logic to look for functional evidence by using 3 different variation of the target variant.
-
-        1. Longest variant: longest variant representation from the alias list used in the publication
-        2. Target variant: target variant specified in the input parameter
-        3. Gene-prefixed variant: gene-variant combination 
-
-        :param variant: target variant
-        :param longest_variant: longest variant representation
-        :param questions: list of questions configured
-        :param input_params: set of input parameters
-
-        :return variant_with_evidence: variant used to find functional evidence
-
-        If no variant with evidence exists, it returns None
-        """
-
-        # Find variant using question #1 (with content included) and #2 (without content)
-        question_with_content = questions[0]
-        regex_with_content = question_with_content[KEY_STOP_CONDITION][KEY_RESP_REGEX]
-        question_without_content = questions[1]
-        regex_without_content = question_without_content[KEY_STOP_CONDITION][KEY_RESP_REGEX]
-
-        gene = input_params['param_gene']
-        prompts_to_execute = []
-        if longest_variant is not None and longest_variant != variant:
-            # Longest variant is found in the publication, that's different from the target variant
-            prompts_to_execute.append({
-                'question': question_with_content,
-                'variant': longest_variant,
-                'regex_condition': regex_with_content,
-                'description': 'Longest Variant'
-            })
-            prompts_to_execute.append({
-                'question': question_without_content,
-                'variant': variant,
-                'regex_condition': regex_without_content,
-                'description': 'Original Variant'
-            })
-        else:
-            prompts_to_execute.append({
-                'question': question_with_content,
-                'variant': variant,
-                'regex_condition': regex_with_content,
-                'description': 'Original Variant'
-            })
-        prompts_to_execute.append({
-            'question': question_without_content,
-            'variant': f'{gene} {variant}',
-            'regex_condition': regex_without_content,
-            'description': 'Gene + Langest Variant'
-        })
-
-        # Execute prompts as configured, until the regex condition is not met
-        # or exhausted the maxium # of attempts to find functional evidence
-        variant_with_evidence = None
-        for i, prompt in enumerate(prompts_to_execute):
-            logging.info(
-                'Searching for Functional Evidence Attept #' + str(i + 1) + ': ' + prompt['description'] + '\n')
-            result = self.__execute_single_prompt(prompt['question'], prompt['variant'], messages, input_params)
-
-            no_evidence = re.search(prompt['regex_condition'], result['answer'])
-            # Check if functional evidence has been found
-            if not no_evidence:
-                variant_with_evidence = prompt['variant']
+        for index, current_variant in enumerate(variants_to_check):
+            logging.info(f'Attempt: {index + 1} - Processing with variant {current_variant}')
+            last_question_processed_id = self.__process_with_variant(questions, current_variant, messages, input_params)
+            # Current variant is present in the publication
+            # and no longer need to check the other variant nomenclatures
+            if last_question_processed_id != NODE_START:
                 break
 
-        return variant_with_evidence
+    def __process_with_variant(
+            self,
+            questions: Dict,
+            variant: str,
+            messages: List[Dict],
+            input_params: Dict) -> str:
+        previous_question_id = None
+        current_question_id = NODE_START
+        while current_question_id:
+            logging.info(f"Current question ID: {current_question_id}")
+            question = {
+                KEY_QUESTION_ID: current_question_id,
+                KEY_QUESTION: questions[current_question_id][KEY_QUESTION]
+            }
+            logging.info(f"Question: {question}")
+            result = self.__execute_single_prompt(question, variant, messages, input_params)
+            answer = result['answer']
+
+            previous_question_id = current_question_id
+            current_question_id = prompt_utils.get_next_question(questions, current_question_id, answer)
+
+        return previous_question_id
 
     def __execute_single_prompt(
             self,
@@ -282,9 +227,6 @@ class PromptExecutor:
 
         :return result: result of executing the prompt
         """
-        input_params['index'] = input_params['index'] + 1  # Increment index
-
-        index = input_params['index']
         gene = input_params['param_gene']
         pdf_in_text = input_params['content']
         publication_id = input_params['publication_id']
@@ -323,7 +265,7 @@ class PromptExecutor:
             'id': publication_id,
             'file_name': pdf_filepath.split(os.sep)[-1],
             'system_message': system_message,
-            'prompt_id': index,
+            'prompt_id': question_id,
             'prompt': re.sub(r'\s+', ' ', prompt_template),
             'answer': re.sub(r'\s+', ' ', message.content),
             'variant': variant,
@@ -355,7 +297,7 @@ class PromptExecutor:
         )
 
         # Handles JSON mode
-        response_format = { "type": "json_object" } if self.enable_json_mode else None
+        response_format = {"type": "json_object"} if self.enable_json_mode else None
         return client.chat.completions.create(
             model=self.gpt_deployment,
             messages=messages,
@@ -368,15 +310,15 @@ class PromptExecutor:
             response_format=response_format
         )
 
-    def __read_publication_configs(self, fname: str) -> Dict[str, Any]:
+    def __read_publication_configs(self, file_path: str) -> Dict[str, Any]:
         """
         From the publication config file, get a list of functional paper to process
-        along with their execusion parameters (e.g. variant, gene, aliases, etc.)
+        along with their execution parameters (e.g. variant, gene, aliases, etc.)
         """
-        logging.debug('Reading publication param file: ' + fname)
-        self.__validate_file_extension(fname, '.xlsx')
+        logging.debug('Reading publication param file: ' + file_path)
+        self.__validate_file_extension(file_path, '.xlsx')
 
-        data = read_excel(fname)
+        data = read_excel(file_path)
 
         pub_configs = {}
         for index, row in data.iterrows():
@@ -406,10 +348,7 @@ class PromptExecutor:
         logging.debug('Reading question config file: ' + file_path)
         self.__validate_file_extension(file_path, '.json')
 
-        with open(file_path, "r") as fd:
-            data = json.load(fd)
-
-        return data
+        return prompt_utils.load_questions_config(file_path)
 
     @staticmethod
     def __validate_file_extension(file_path: str, expected_ext: str) -> None:
@@ -430,7 +369,7 @@ class PromptExecutor:
         :return: path to the CSV file created
         """
         time_suffix = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
-        file_name = f'prompt_execution_result-{time_suffix}.csv'
+        file_name = f'prompt_execution2_result-{time_suffix}.csv'
         file_path = os.path.join('result', file_name)
         logging.debug('Setup result file: ' + file_path)
 
@@ -480,7 +419,7 @@ def main():
                         format='%(asctime)s %(levelname)-8s %(message)s',
                         datefmt='%a, %d %b %Y %H:%M:%S',
                         handlers=[
-                            TimedRotatingFileHandler(os.path.join('logs', 'execute_prompts.log'), when='midnight'),
+                            TimedRotatingFileHandler(os.path.join('logs', 'execute_prompts2.log'), when='midnight'),
                             logging.StreamHandler()
                         ])
 
