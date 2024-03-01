@@ -369,7 +369,7 @@ class PromptExecutor:
         :return: path to the CSV file created
         """
         time_suffix = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
-        file_name = f'prompt_execution2_result-{time_suffix}.csv'
+        file_name = f'prompt_execution_result-{time_suffix}.csv'
         file_path = os.path.join('result', file_name)
         logging.debug('Setup result file: ' + file_path)
 
@@ -419,7 +419,7 @@ def main():
                         format='%(asctime)s %(levelname)-8s %(message)s',
                         datefmt='%a, %d %b %Y %H:%M:%S',
                         handlers=[
-                            TimedRotatingFileHandler(os.path.join('logs', 'execute_prompts2.log'), when='midnight'),
+                            TimedRotatingFileHandler(os.path.join('logs', 'execute_prompts.log'), when='midnight'),
                             logging.StreamHandler()
                         ])
 

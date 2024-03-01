@@ -10,23 +10,23 @@ from typing import Mapping
 def process_answer(row: Mapping[str, str]) -> str:
     answer = row['answer']
 
-    found = re.search(r'[aA]ssay\s+[\S*\s+]*not\s+[pP]resent', answer)
+    found = re.search(r'[Aa]ssays [Ii]ndicate [Vv]ariant [Ii]s [Pp]athogenic', answer)
     if found:
         return 'No Assays'
 
-    found = re.search(r'[vV]ariant\s+\w*\s*[iI]ntermediate\s+[fF]unction', answer)
+    found = re.search(r'[Aa]ssays [Ii]ndicate [Vv]ariant [Hh]as [Ii]ntermediate [Ff]unction', answer)
     if found:
         return 'Intermediate'
 
-    found = re.search(r'[vV]ariant\s+\w*\s*[pP]athogenic', answer)
+    found = re.search(r'[Aa]ssays [Ii]ndicate [Vv]ariant [Ii]s [Pp]athogenic', answer)
     if found:
         return 'Pathogenic'
 
-    found = re.search(r'[vV]ariant\s+\w*\s*[bB]enign', answer)
+    found = re.search(r'[Aa]ssays [Ii]ndicate [Vv]ariant is [Bb]enign', answer)
     if found:
         return 'Benign'
 
-    found = re.search(r'[vV]ariant\s+\w*\s*[iI]nconclusive', answer)
+    found = re.search(r'[Aa]ssays [Aa]re [Ii]nconclusive', answer)
     if found:
         return 'Inconclusive'
 
