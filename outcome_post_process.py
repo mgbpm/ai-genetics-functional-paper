@@ -10,10 +10,6 @@ from typing import Mapping
 def process_answer(row: Mapping[str, str]) -> str:
     answer = row['answer']
 
-    found = re.search(r'[Aa]ssays [Ii]ndicate [Vv]ariant [Ii]s [Pp]athogenic', answer)
-    if found:
-        return 'No Assays'
-
     found = re.search(r'[Aa]ssays [Ii]ndicate [Vv]ariant [Hh]as [Ii]ntermediate [Ff]unction', answer)
     if found:
         return 'Intermediate'
@@ -29,6 +25,10 @@ def process_answer(row: Mapping[str, str]) -> str:
     found = re.search(r'[Aa]ssays [Aa]re [Ii]nconclusive', answer)
     if found:
         return 'Inconclusive'
+    
+    found = re.search(r'"answer": "No"', answer)
+    if found:
+        return 'No Assays'
 
     return 'Cannot Classify'
 

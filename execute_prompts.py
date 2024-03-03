@@ -8,7 +8,6 @@ import sys
 import time
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
-from pathlib import Path
 from string import Template
 from typing import List, Dict, Any
 
@@ -61,7 +60,7 @@ class PromptExecutor:
 
     def process(self) -> None:
         """
-        Process publications in PDF as per configuration
+        Process publications per configuration
         """
         if self.publication_id:
             # Only process the publication specified in the argument
@@ -95,7 +94,7 @@ class PromptExecutor:
             variants_parsed = [s.strip() for s in variant_aliases.split(',')]
             expected_outcome = publication['expected_outcomes']
 
-            if file_path and variant and gene and Path(file_path).suffix == '.pdf':
+            if file_path and variant and gene:
                 self.__execute_sequential_prompts(publication_id, file_path, variant, gene, variants_parsed,
                                                   expected_outcome)
             else:
@@ -110,7 +109,7 @@ class PromptExecutor:
     def __execute_sequential_prompts(
             self,
             publication_id: str,
-            pdf_filepath: str,
+            publication_filepath: str,
             variant: str,
             gene: str,
             variant_aliases: List[str],
@@ -119,21 +118,28 @@ class PromptExecutor:
         Executes a set of prompts configured for the given publication
 
         :param publication_id: id of publication specified in the publication param configs
-        :param pdf_filepath: file location of the publication
+        :param publication_filepath: file location of the publication
         :param variant: target variant
         :param gene: target gene
         :param variant_aliases: list of variant nomenclature aliases equivalent to the target variant
         :param expected_outcome: expected final outcome from running the prompts for comparison
         """
-        logging.debug(f"Id: '{publication_id}', File Path: '{pdf_filepath}', Variant: '{variant}', Gene: '{gene}'")
+        logging.debug(f"Id: '{publication_id}', File Path: '{publication_filepath}', "
+                      f"Variant: '{variant}', Gene: '{gene}'")
 
-        # Convert PDF to text
-        pdf_in_text = file_utils.convert_pdf_to_txt(pdf_filepath)
+        # Get content of the publication in text
+        file_extension = self.__get_file_extension(publication_filepath)
+        if file_extension == '.pdf':
+            publication_in_text = file_utils.extract_text_from_pdf(publication_filepath)
+        elif file_extension == '.txt':
+            publication_in_text = file_utils.get_file_content(publication_filepath)
+        else:
+            raise ValueError(f'File extension {file_extension} is not supported for a publication')
 
-        # Find the longest variant that appears in PDF
+        # Find the longest variant that appears in the publication
         variant_perms = variant_aliases.copy()
         variant_perms.append(variant)
-        longest_variant = variant_utils.find_longest_matching_variant(pdf_in_text, variant_perms)
+        longest_variant = variant_utils.find_longest_matching_variant(publication_in_text, variant_perms)
         logging.info(f'Variants: {variant_perms}')
         logging.info(f'Longest Variant: {longest_variant}')
         # Configure a set of variants to try
@@ -161,9 +167,9 @@ class PromptExecutor:
         # Initialize input parameters
         input_params = {
             'param_gene': gene,
-            'content': pdf_in_text,
+            'content': publication_in_text,
             'publication_id': publication_id,
-            'pdf_filepath': pdf_filepath,
+            'publication_filepath': publication_filepath,
             'system_message': system_message,
             'expected_outcome': expected_outcome
         }
@@ -228,9 +234,9 @@ class PromptExecutor:
         :return result: result of executing the prompt
         """
         gene = input_params['param_gene']
-        pdf_in_text = input_params['content']
+        publication_in_text = input_params['content']
         publication_id = input_params['publication_id']
-        pdf_filepath = input_params['pdf_filepath']
+        publication_filepath = input_params['publication_filepath']
         system_message = input_params['system_message']
         expected_outcome = input_params['expected_outcome']
 
@@ -239,7 +245,8 @@ class PromptExecutor:
         logging.info(f'##### Start prompt #{question_id}')
 
         # Set up the next prompt
-        prompt = Template(prompt_template).substitute(param_variant=variant, param_gene=gene, content=pdf_in_text)
+        prompt = Template(prompt_template).substitute(param_variant=variant,
+                                                      param_gene=gene, content=publication_in_text)
         messages.append({
             "role": "user",
             "content": prompt
@@ -263,7 +270,7 @@ class PromptExecutor:
         # Capture a summary of result for each prompt
         result = {
             'id': publication_id,
-            'file_name': pdf_filepath.split(os.sep)[-1],
+            'file_name': publication_filepath.split(os.sep)[-1],
             'system_message': system_message,
             'prompt_id': question_id,
             'prompt': re.sub(r'\s+', ' ', prompt_template),
@@ -360,6 +367,14 @@ class PromptExecutor:
         file_ext = pathlib.Path(file_path).suffix
         if file_ext != expected_ext:
             raise TypeError(f"Only supports extension '{expected_ext}', but provided a file with '{file_ext}'")
+        
+    @staticmethod
+    def __get_file_extension(file_path: str) -> str:
+        """
+        Gets the extension of the given file
+        """
+        file_ext = pathlib.Path(file_path).suffix
+        return file_ext.lower()
 
     @staticmethod
     def __setup_result_file() -> str:
