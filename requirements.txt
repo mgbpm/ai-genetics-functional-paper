@@ -32,3 +32,6 @@ tzdata
 urllib3
 yarl
 natsort
+haystack-ai
+sentence-transformers>=2.2.0
+transformers[torch,sentencepiece]
