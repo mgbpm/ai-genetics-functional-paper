@@ -10,6 +10,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 from string import Template
+
+from content_retriever import ContentRetriever
 from utils import file_utils, variant_utils
 from pandas import read_excel
 import time
@@ -41,6 +43,7 @@ KEY_QUESTION_ID = "id"
 KEY_STOP_CONDITION = "stop_condition"
 KEY_RESP_REGEX = "response_regex"
 
+
 class PromptExecutor:
     def __init__(self, args, gpt_deployment: str):
         self.publicationid: str = args.publicationId
@@ -67,7 +70,7 @@ class PromptExecutor:
                 self.__handle_single_publication(id)
                 count += 1
                 if (self.sleep_at_each_publication and self.sleep_at_each_publication >= 0
-                    and count < len(self.publications_parameters)):
+                        and count < len(self.publications_parameters)):
                     logging.info(f'Sleeping for {self.sleep_at_each_publication} seconds')
                     time.sleep(self.sleep_at_each_publication)
                     logging.debug('Awake from the sleep')
@@ -90,15 +93,16 @@ class PromptExecutor:
             expected_outcome = publication['expected_outcomes']
 
             if file_path and variant and gene and Path(file_path).suffix == '.pdf':
-                self.__execute_sequential_prompts(publication_id, file_path, variant, gene, variants_parsed, expected_outcome)
+                self.__execute_sequential_prompts(publication_id, file_path, variant, gene, variants_parsed,
+                                                  expected_outcome)
             else:
                 logging.error(
                     f'Required metadata missing for the publication: id={publication_id}')
         else:
             logging.error(
                 f'Cannot find the publication: id={publication_id}')
-        
-        logging.info(f'** End processing publication Id: {publication_id}\n')         
+
+        logging.info(f'** End processing publication Id: {publication_id}\n')
 
     def __execute_sequential_prompts(
             self,
@@ -138,10 +142,11 @@ class PromptExecutor:
         # Initialize with a sysmtem message
         system_message = self.questions_parameters[KEY_SYSMSG]
         if '$param' in system_message:
-            system_message = Template(system_message).substitute(param_variant=variant, param_gene=gene, param_variant_aliases=", ".join(variant_aliases))
-        
+            system_message = Template(system_message).substitute(param_variant=variant, param_gene=gene,
+                                                                 param_variant_aliases=", ".join(variant_aliases))
+
         messages = [
-            { 
+            {
                 "role": "system",
                 "content": system_message
             }
@@ -163,7 +168,8 @@ class PromptExecutor:
         }
 
         # Find variant using question #1 (with content included) and #2 (without content)
-        variant_with_evidence = self.__execute_prompt_for_functional_evidence(variant, longest_variant, questions, messages, input_params)
+        variant_with_evidence = self.__execute_prompt_for_functional_evidence(variant, longest_variant, questions,
+                                                                              messages, input_params)
 
         # If functional evidence was found, ask remaining questions
         if variant_with_evidence:
@@ -187,7 +193,7 @@ class PromptExecutor:
                     if found:
                         logging.info(f'Stopping condition {stop_condition} has been satisfied: match={found}')
                         should_stop = True
-    
+
     def __execute_prompt_for_functional_evidence(
             self,
             variant: str,
@@ -254,7 +260,8 @@ class PromptExecutor:
         # or exhausted the maxium # of attempts to find functional evidence
         variant_with_evidence = None
         for i, prompt in enumerate(prompts_to_execute):
-            logging.info('Searching for Functional Evidence Attept #' + str(i+1) + ': ' + prompt['description'] + '\n')
+            logging.info(
+                'Searching for Functional Evidence Attept #' + str(i + 1) + ': ' + prompt['description'] + '\n')
             result = self.__execute_single_prompt(prompt['question'], prompt['variant'], messages, input_params)
 
             no_evidence = re.search(prompt['regex_condition'], result['answer'])
@@ -266,7 +273,7 @@ class PromptExecutor:
                 break
 
         return variant_with_evidence
-    
+
     def __execute_single_prompt(
             self,
             question: Dict,
@@ -283,7 +290,7 @@ class PromptExecutor:
 
         :return result: result of executing the prompt
         """
-        input_params['index'] = input_params['index'] + 1 # Increment index
+        input_params['index'] = input_params['index'] + 1  # Increment index
 
         index = input_params['index']
         gene = input_params['param_gene']
@@ -306,6 +313,26 @@ class PromptExecutor:
         size_limit = min(len(messages[-1]['content']), 300)
         logging.info('> Human: ' + re.sub('\s+', ' ', messages[-1]['content'][:size_limit]) + ' ...')
 
+        # test
+        pdf_in_text = messages[-1]['content']
+        query = messages[0]['content']
+
+        analyzer = ContentRetriever(
+            embedding_model_name="Snowflake/snowflake-arctic-embed-m-v1.5",
+            reranking_model_name="BAAI/bge-reranker-large")
+
+        analyzer.process_document(pdf_in_text)
+        top_k = 10
+        search_results = analyzer.search_query(query, top_k=top_k)
+
+        # for doc in search_results:
+        print(len(search_results))
+        for doc in search_results:
+            print(f"Content: {doc.content}\nScore: {doc.score}\n")
+
+        exit()
+        # test
+
         # Call OpenAI
         response = self.__call_openapi_chat_completion(messages)
 
@@ -314,7 +341,8 @@ class PromptExecutor:
         message = response['choices'][0]['message']
         messages.append(message)
         logging.info('> AI: ' + message['content'])
-        logging.info('Completion Tokens: ' + str(usage['completion_tokens']) + ', Prompt Tokens: ' + str(usage['prompt_tokens']))
+        logging.info(
+            'Completion Tokens: ' + str(usage['completion_tokens']) + ', Prompt Tokens: ' + str(usage['prompt_tokens']))
         logging.info(f'##### End prompt #{id}\n')
 
         # Capture a summary of result for each prompt
@@ -330,14 +358,14 @@ class PromptExecutor:
             'expected_outcomes': expected_outcome,
             'prompt_tokens': usage['prompt_tokens'],
             'completion_tokens': usage['completion_tokens'],
-            'estimated_cost': (0.06 * (usage['prompt_tokens']/1000) + 0.12 * (usage['completion_tokens']/1000)),
+            'estimated_cost': (0.06 * (usage['prompt_tokens'] / 1000) + 0.12 * (usage['completion_tokens'] / 1000)),
             'timestamp': datetime.now().isoformat()
         }
         # Write the result to CSV file
         self.__write_result_to_csv(result)
 
         return result
-    
+
     def __call_openapi_chat_completion(self, messages: List[Dict]) -> Dict:
         """
         Call GPT service to get a response back
@@ -348,7 +376,7 @@ class PromptExecutor:
         if self.use_mock:
             # Enabled to use mock instead of calling GPT service
             # Useful when verifying the logic used before and after calling the service
-            logging.debug('Calling mock service')       
+            logging.debug('Calling mock service')
             return {
                 "choices": [
                     {
@@ -371,16 +399,16 @@ class PromptExecutor:
                 }
             }
         else:
-            logging.debug(f'Calling OpenAI: GPT Deployment - {self.gpt_deployment}')    
+            logging.debug(f'Calling OpenAI: GPT Deployment - {self.gpt_deployment}')
             return openai.ChatCompletion.create(
-                        engine = self.gpt_deployment,
-                        messages = messages,
-                        temperature=self.temperature,
-                        max_tokens=self.max_tokens,
-                        top_p=0.95,
-                        frequency_penalty=0,
-                        presence_penalty=0)
-        
+                engine=self.gpt_deployment,
+                messages=messages,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                top_p=0.95,
+                frequency_penalty=0,
+                presence_penalty=0)
+
     def __read_publication_configs(self, fname: str) -> Dict[str, Any]:
         """
         From the publication config file, get a list of functional paper to process
@@ -408,9 +436,9 @@ class PromptExecutor:
             pub_id = publication['id']
             del publication['id']
             pub_configs[pub_id] = publication
-        
+
         return pub_configs
-    
+
     def __read_question_configs(self, file_path: str) -> Dict:
         """
         From the question config file, get a system message
@@ -424,7 +452,7 @@ class PromptExecutor:
             data = json.load(fd)
 
         return data
-    
+
     def __validate_file_extension(self, file_path: str, expected_ext: str) -> None:
         """
         Validates if the file in the given file path has the expected file extension
@@ -432,9 +460,9 @@ class PromptExecutor:
         If validation fails, throws a type error.
         """
         file_ext = pathlib.Path(file_path).suffix
-        if file_ext != expected_ext: 
+        if file_ext != expected_ext:
             raise TypeError(f"Only supports extension '{expected_ext}', but provided a file with '{file_ext}'")
-    
+
     def __setup_result_file(self) -> str:
         """
         Creates a CSV file to store prompt execution results
@@ -453,7 +481,7 @@ class PromptExecutor:
                 writer.writeheader()
 
         return file_path
-    
+
     def __write_result_to_csv(self, result: Dict) -> None:
         """
         Saves the given result to the CSV file set up during initialization
@@ -470,9 +498,11 @@ def main():
     parser.add_argument(
         '--publicationId', help='Id of the publication to process', required=False, type=str)
     parser.add_argument(
-        '--sleepAtEachPublication', help='If specified, wait x number of seconds before processing the next publication', required=False, type=int)
+        '--sleepAtEachPublication',
+        help='If specified, wait x number of seconds before processing the next publication', required=False, type=int)
     parser.add_argument(
-        '--useMock', help='Indicates whether or not to use a mock service instead of calling OpenAI', action='store_true')
+        '--useMock', help='Indicates whether or not to use a mock service instead of calling OpenAI',
+        action='store_true')
     parser.add_argument(
         '--debug', help='Sets logger level to DEBUG', action='store_true')
     parser.add_argument(
