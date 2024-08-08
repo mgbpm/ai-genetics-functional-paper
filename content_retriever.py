@@ -79,11 +79,11 @@ class ContentRetriever:
         docs = [Document(content=doc_text, meta={"name": "academic_paper"})]
         self.preprocessing_pipeline.run({"cleaner": {"documents": docs}})
 
-    def search_query(self, query: str, top_k: int = 5):
-        result = self.search_pipeline.run({"text_embedder": {"text": query},
+    def search_query(self, retrieval_query: str, reranking_query: str, top_k: int = 5):
+        result = self.search_pipeline.run({"text_embedder": {"text": retrieval_query},
                                            "embedding_retriever": {"top_k": top_k * 2},
-                                           "sparse_retriever": {"query": query, "top_k": top_k * 2},
-                                           "ranker": {"query": query, "top_k": top_k}})
+                                           "sparse_retriever": {"query": retrieval_query, "top_k": top_k * 2},
+                                           "ranker": {"query": reranking_query, "top_k": top_k}})
         return result["ranker"]["documents"]
 
 

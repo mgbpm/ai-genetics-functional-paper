@@ -55,6 +55,7 @@ class PromptExecutor:
         self.gpt_deployment: str = gpt_deployment
         self.temperature: int = args.temperature
         self.max_tokens: int = args.maxTokens
+        self.use_rag: bool = args.useRAG
 
     def process(self) -> None:
         """
@@ -164,7 +165,8 @@ class PromptExecutor:
             'publication_id': publication_id,
             'pdf_filepath': pdf_filepath,
             'system_message': system_message,
-            'expected_outcome': expected_outcome
+            'expected_outcome': expected_outcome,
+            'variant_aliases': ", ".join(variant_aliases)
         }
 
         # Find variant using question #1 (with content included) and #2 (without content)
@@ -259,6 +261,9 @@ class PromptExecutor:
         # Execute prompts as configured, until the regex condition is not met
         # or exhausted the maxium # of attempts to find functional evidence
         variant_with_evidence = None
+        if self.use_rag:
+            self.__concise_pdf_content_with_rag(input_params)
+
         for i, prompt in enumerate(prompts_to_execute):
             logging.info(
                 'Searching for Functional Evidence Attept #' + str(i + 1) + ': ' + prompt['description'] + '\n')
@@ -312,26 +317,6 @@ class PromptExecutor:
         })
         size_limit = min(len(messages[-1]['content']), 300)
         logging.info('> Human: ' + re.sub('\s+', ' ', messages[-1]['content'][:size_limit]) + ' ...')
-
-        # test
-        pdf_in_text = messages[-1]['content']
-        query = messages[0]['content']
-
-        analyzer = ContentRetriever(
-            embedding_model_name="Snowflake/snowflake-arctic-embed-m-v1.5",
-            reranking_model_name="BAAI/bge-reranker-large")
-
-        analyzer.process_document(pdf_in_text)
-        top_k = 10
-        search_results = analyzer.search_query(query, top_k=top_k)
-
-        # for doc in search_results:
-        print(len(search_results))
-        for doc in search_results:
-            print(f"Content: {doc.content}\nScore: {doc.score}\n")
-
-        exit()
-        # test
 
         # Call OpenAI
         response = self.__call_openapi_chat_completion(messages)
@@ -491,6 +476,31 @@ class PromptExecutor:
             result_writer.writerow(result)
             csv_file.close()
 
+    def __concise_pdf_content_with_rag(self, input_params: Dict) -> str:
+        reranking_query = input_params['variant_aliases']
+        retrieval_query = input_params['system_message']
+        pdf_in_text = input_params['content']
+        print(reranking_query)
+        print(retrieval_query)
+        analyzer = ContentRetriever(
+            embedding_model_name="Snowflake/snowflake-arctic-embed-m-v1.5",
+            reranking_model_name="BAAI/bge-reranker-large")
+
+        analyzer.process_document(pdf_in_text)
+        top_k = 10
+        search_results = analyzer.search_query(
+            retrieval_query=retrieval_query,
+            reranking_query=reranking_query,
+            top_k=top_k)
+
+        # for doc in search_results:
+        print(len(search_results))
+        shrink_content = []
+        for doc in search_results:
+            shrink_content.append(f"Content: {doc.content}\nRetrieve Similarity Score: {doc.score}\n")
+        input_params['content'] = "\n".join(shrink_content)
+        # print(input_params['content'])
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -513,6 +523,8 @@ def main():
         '--temperature', help='GPT model - temperature setting', required=False, type=int, default=0)
     parser.add_argument(
         '--maxTokens', help='GPT model - max # of tokens in response', required=False, type=int, default=1000)
+    parser.add_argument(
+        '--useRAG', help='Indicates whether or not to use RAG to concise PDF content', action='store_true')
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
